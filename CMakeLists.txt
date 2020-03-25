@@ -37,7 +37,6 @@ if(ANDROID)
 endif()
 
 #real  project logic starts from here
-
 project(tengine)
 set(BUILD_ALL_IN_ONE 1)
 add_definitions(-DALL_IN_STATIC_LIB=1)
@@ -86,6 +85,10 @@ endif()
 set(GIT_COMMIT_ID -DGIT_COMMIT_ID="0x${stripped_commit_id}")
 
 message("GIT COMMIT ID: " 0x${stripped_commit_id})
+
+if(IOS)
+    add_definitions(-DIOS=TRUE)
+endif()
 
 if( NOT ANDROID )
     add_definitions(-DCONFIG_LEGACY_API=1)
@@ -224,11 +227,11 @@ endif()
 if(AUTH_LIB)
     TARGET_LINK_LIBRARIES(hclcpu ${AUTH_LIB}/libauthd.a)
 endif()
-
+if(NOT IOS)
 add_subdirectory(benchmark)
 add_subdirectory(tests)
 add_subdirectory(examples)
-
+endif()
 install (TARGETS tengine  DESTINATION lib)
 if(NOT BUILD_ALL_IN_STATIC AND NOT BUILD_ALL_IN_ONE)
     install (TARGETS hclcpu  DESTINATION lib)

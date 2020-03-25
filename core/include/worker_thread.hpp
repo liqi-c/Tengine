@@ -135,21 +135,25 @@ private:
         // bind CPU first
         if(bind_cpu_ >= 0)
         {
+#ifndef IOS
             cpu_set_t mask;
             CPU_ZERO(&mask);
             CPU_SET(bind_cpu_, &mask);
 
             if(sched_setaffinity(0, sizeof(mask), &mask) == 0)
                 bind_done_ = true;
+#endif
         }
 
 	if(master_cpu)
 	{
+#ifndef IOS
            // set scheduler
            struct sched_param sched_param;
 
            sched_param.sched_priority = 10;
            sched_setscheduler(0, SCHED_RR, &sched_param);
+#endif	
 	}
 
 	while(true)

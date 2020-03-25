@@ -211,7 +211,9 @@ static int real_vload_model(context_t exec_context, const char* model_name, cons
     if(!StaticGraphManager::Add(std::string(model_name), StaticGraphPtr(static_graph)))
     {
         XLOG_ERROR() << "replicated model name detected: " << model_name << " should not happen\n";
-        set_tengine_errno(EBADSLT);
+        #ifndef IOS
+	set_tengine_errno(EBADSLT);
+	#endif
         return -1;
     }
 

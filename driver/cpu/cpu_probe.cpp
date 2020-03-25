@@ -26,7 +26,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef IOS
+#include <mm_malloc.h>
+#else
 #include <malloc.h>
+#endif
 #include <string.h>
 
 #include "cpu_device.h"

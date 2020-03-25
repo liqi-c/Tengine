@@ -1,6 +1,9 @@
 #include "tengine_errno.hpp"
-
+#ifdef IOS
+static int tengine_errno;
+#else
 static __thread int tengine_errno;
+#endif
 
 void set_tengine_errno(int err_num)
 {

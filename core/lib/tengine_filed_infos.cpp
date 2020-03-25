@@ -29,8 +29,13 @@
 #else
 #define ST_OLREPORT "N"
 #endif
-
+#ifdef IOS
+char tengine_field_info[1024] = {
+	"TENGINE_FIELD_INFO_" ST_FP32 ST_FP16 ST_INT8 ST_UINT8 ST_OLREPORT
+};
+#else
 char tengine_field_info[1024] __TENGINE_ARRT_ENV__ = {
 	"TENGINE_FIELD_INFO_" ST_FP32 ST_FP16 ST_INT8 ST_UINT8 ST_OLREPORT
 };
+#endif
 

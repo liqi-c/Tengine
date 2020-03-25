@@ -49,6 +49,14 @@ cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/aarch64-linux-gnu.toolchain.cmake ..
 make -j$CPU_NUMS && make install
 popd
 
+##### iOS
+mkdir -p build-ios
+pushd build-ios
+cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DCMAKE_OSX_ARCHITECTURES=armv7  ..
+make -j$CPU_NUMS && make install
+popd
+
+
 ##### linux x86_convert_tools
 mkdir -p build-linux-x86
 pushd build-linux-x86
