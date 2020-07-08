@@ -4,7 +4,7 @@ macro (tengine_example name file)
         "${CMAKE_CURRENT_SOURCE_DIR}/${file}"
         "${CMAKE_CURRENT_SOURCE_DIR}/common/tengine_operations.c")
 
-    target_link_libraries(${name} ${CMAKE_PROJECT_NAME})
+    target_link_libraries(${name} ${PROJECT_NAME})
     include_directories("${PROJECT_SOURCE_DIR}/examples/common")
     install (TARGETS ${name} DESTINATION bin)
 endmacro()

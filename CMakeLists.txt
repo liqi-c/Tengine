@@ -56,11 +56,12 @@ endif()
 # Do check list
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/check.cmake")
 
-project(tengine-lite)
+#project(tengine-lite)
+project(tengine)
 
 option(TENGINE_OPENMP "openmp support" ON)
-option(TENGINE_BUILD_BENCHMARK "build examples" ON)
-option(TENGINE_BUILD_EXAMPLES "build benchmark" ON)
+option(TENGINE_BUILD_BENCHMARK "build examples" OFF)
+option(TENGINE_BUILD_EXAMPLES "build benchmark" OFF)
 option(TENGINE_BUILD_TESTS "build tests" OFF)
 option(TENGINE_DEBUG_DATA "extract data for every layer" OFF)
 option(TENGINE_DEBUG_TIME "print time information for every layer" OFF)
@@ -143,9 +144,10 @@ endif()
 
 
 # enable cmake ctest module
-enable_testing()
+#enable_testing()
 
 # src files
+
 add_subdirectory(src)
 if (TENGINE_BUILD_BENCHMARK)
     add_subdirectory(benchmark)

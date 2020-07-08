@@ -25,7 +25,8 @@ list(APPEND TENGINE_BACKEND_COMMON "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/cpu_node
 list(APPEND TENGINE_BACKEND_COMMON "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/cpu_probe.c")
 
 # add reference operator files
-file(GLOB_RECURSE TENGINE_BACKEND_REF_OPS "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/op/*ref.c")
+#file(GLOB_RECURSE TENGINE_BACKEND_REF_OPS "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/op/*ref.c")
+file(GLOB_RECURSE TENGINE_BACKEND_REF_OPS "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/op/conv_ref.c")
 
 # add hcl operator files
 file(GLOB_RECURSE TENGINE_BACKEND_HCL_OPS   "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/op/*hcl.c"
@@ -46,7 +47,7 @@ file(GLOB_RECURSE TENGINE_BACKEND_CMSIS_OPS "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu
 
 # add advanced hcl source files
 if (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
-    add_library(${CMAKE_PROJECT_NAME} SHARED
+    add_library(${PROJECT_NAME} STATIC
         ${TENGINE_LIB_SRCS} ${TENGINE_FRONT_END_SRCS}
         ${TENGINE_SERIALIZER_SRCS}
         ${TENGINE_TINY_SERIALIZER_SRCS}
@@ -55,7 +56,7 @@ if (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
         ${TENGINE_BACKEND_HCL_OPS}
         ${TENGINE_BACKEND_HCL_ASM_OPS})
 else()
-    add_library(${CMAKE_PROJECT_NAME} SHARED
+    add_library(${PROJECT_NAME} STATIC
         ${TENGINE_LIB_SRCS}
         ${TENGINE_FRONT_END_SRCS}
         ${TENGINE_SERIALIZER_SRCS}
@@ -72,14 +73,15 @@ endif()
 
 
 # add include path
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${TENGINE_PRIVATE_INC_DIRS})
+target_include_directories(${PROJECT_NAME} PRIVATE ${TENGINE_PRIVATE_INC_DIRS})
 
 
 if (ANDROID)
-    target_link_libraries(${CMAKE_PROJECT_NAME} android ${TENGINE_LINKING_LIBS})
+    target_link_libraries(${PROJECT_NAME} android ${TENGINE_LINKING_LIBS})
 else()
-    target_link_libraries(${CMAKE_PROJECT_NAME} pthread dl m ${TENGINE_LINKING_LIBS})
+    target_link_libraries(${PROJECT_NAME} pthread dl m ${TENGINE_LINKING_LIBS})
 endif()
+install(TARGETS ${PROJECT_NAME} EXPORT OpenCVModules ARCHIVE DESTINATION "${OPENCV_3P_LIB_INSTALL_PATH}" COMPONENT dev)
 
-install (TARGETS ${CMAKE_PROJECT_NAME} DESTINATION lib)
-install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/tengine_c_api.h DESTINATION include)
+#install (TARGETS ${CMAKE_PROJECT_NAME} DESTINATION lib)
+#install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/tengine_c_api.h DESTINATION include)

@@ -348,6 +348,7 @@ int set_cpu_affine(size_t mask)
     int status = set_sched_affinity(mask);
     if (0 != status)
         return -1;
+    return status;
 #endif
 }
 
