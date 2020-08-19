@@ -2,9 +2,7 @@
 
 # Tengine Lite
 
-[![GitHub license](http://OAID.github.io/pics/apache_2.0.svg)](./LICENSE) [![Build Status](https://img.shields.io/github/workflow/status/OAID/Tengine/Tengine-Lite-Actions/tengine-lite)](https://github.com/OAID/Tengine/actions?query=workflow%3ATengine-Lite-Actions) [![Test Status](https://img.shields.io/travis/OAID/Tengine/tengine-lite?label=test)](https://travis-ci.org/OAID/Tengine)
-
-
+[![GitHub license](http://OAID.github.io/pics/apache_2.0.svg)](./LICENSE) 
 
 ## 简介
 
@@ -21,56 +19,9 @@ Tengine Lite 核心代码由 4 个模块组成：
 ## 架构简析
 ![Tengine Lite 架构](doc/architecture.png)
 
-
-## 如何使用
-
-### 编译
-
-- [快速编译](doc/compile.md) 基于 cmake 实现简单的跨平台编译。
-
-### 示例
-
-- [examples](examples/) 提供基础的分类、检测算法用例，根据 issue 需求持续更新。
-
-### 模型仓库
-
-- [Tengine model zoo](https://pan.baidu.com/s/1Ar9334MPeIV1eq4pM1eI-Q) 兼容原有 Tengine 的模型示例仓库（密码：hhgc）。
-
-### 转换工具
-
-- [预编译版本](https://github.com/OAID/Tengine/releases/download/lite-v0.1/convert_model_to_tm)：提供 Linux 系统上预编译好的模型转换工具；
-- [在线转换版本](https://convertmodel.com/)：基于 WebAssembly 实现（浏览器本地转换，模型不会上传）；
-- [源码编译](doc/convert_tm.md)：参考原有 Tengine 项目编译生成。
-
-### 速度评估
-
-- [Benchmark](benchmark/) 基础网络速度评估工具，欢迎大家更新。
-
-## Roadmap
-
-- [Road map](doc/roadmap.md)
-
-## 致谢
-Tengine Lite 参考和借鉴了下列项目：
-
-- [Caffe](https://github.com/BVLC/caffe)
-- [Tensorflow](https://github.com/tensorflow/tensorflow)
-- [MegEngine](https://github.com/MegEngine/MegEngine)
-- [ONNX](https://github.com/onnx/onnx)
-- [ncnn](https://github.com/Tencent/ncnn)
-- [MNN](https://github.com/alibaba/MNN)
-- [Paddle Lite](https://github.com/PaddlePaddle/Paddle-Lite)
-- [ACL](https://github.com/ARM-software/ComputeLibrary)
-- [stb](https://github.com/nothings/stb)
-- [convertmodel](https://convertmodel.com/)
-
 ## License
 
 - [Apache 2.0](LICENSE)
-
-## FAQ
-
-- [FAQ 常见问题](doc/faq.md)
 
 ## 技术讨论
 - Github issues
