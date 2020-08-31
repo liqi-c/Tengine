@@ -467,7 +467,7 @@ static int winograd_support(struct conv_param* param, int in_h, int in_w)
     if (dilation_h != 1 || dilation_w != 1 || stride_h != 1 || stride_w != 1)
         return 0;
 
-    return 1;
+    return 0;
 }
 
 int conv_hcl_get_shared_mem_size(struct ir_tensor* input, struct ir_tensor* output, struct conv_param* param)
