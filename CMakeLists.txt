@@ -59,7 +59,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/check.cmake")
 #project(tengine-lite)
 project(tengine)
 
-option(TENGINE_OPENMP "openmp support" ON)
+option(TENGINE_OPENMP "openmp support" OFF)
 option(TENGINE_BUILD_BENCHMARK "build examples" OFF)
 option(TENGINE_BUILD_EXAMPLES "build benchmark" OFF)
 option(TENGINE_BUILD_TESTS "build tests" OFF)
