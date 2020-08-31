@@ -154,8 +154,35 @@ static void DirectConv(float* input_buf, int input_h, int input_w, float* output
 }
 #endif
 
+static int get_private_mem_size(struct ir_tensor* filter)
+{
+    return filter->elem_num * filter->elem_size;    // caution
+}
+
+static void interleave(struct ir_tensor* filter, struct conv_priv_info* priv_info)
+{
+    /* simply copy the data */
+    memcpy(priv_info->interleave_buffer, filter->data, filter->elem_num * filter->elem_size);
+}
+
+int conv_dw_prerun(struct ir_tensor* input_tensor, struct ir_tensor* filter_tensor, struct ir_tensor* output_tensor,
+                   struct conv_priv_info* priv_info, struct conv_param* param)
+{
+    if (!priv_info->external_interleave_mem)
+    {
+        int mem_size = get_private_mem_size(filter_tensor);
+        void* mem = sys_malloc(mem_size);
+        priv_info->interleave_buffer = mem;
+        priv_info->interleave_buffer_size = mem_size;
+    }
+
+    interleave(filter_tensor, priv_info);
+
+    return 0;
+}
+
 int conv_dw_run(struct ir_tensor* input_tensor, struct ir_tensor* filter_tensor, struct ir_tensor* bias_tensor,
-                struct ir_tensor* output_tensor, struct conv_param* param, int num_thread, int cpu_affinity)
+                struct ir_tensor* output_tensor, struct conv_priv_info* conv_info, struct conv_param* param, int num_thread, int cpu_affinity)
 {
     /* param */
     int pads[4];
@@ -188,7 +215,7 @@ int conv_dw_run(struct ir_tensor* input_tensor, struct ir_tensor* filter_tensor,
 
     /* buffer addr */
     float* input_buf = ( float* )input_tensor->data;
-    float* kernel_buf = ( float* )filter_tensor->data;
+    float* kernel_buf = conv_info->interleave_buffer;
     float* output_buf = ( float* )output_tensor->data;
     float* biases_buf = NULL;
     if (bias_tensor)

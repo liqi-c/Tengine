@@ -31,6 +31,36 @@
 #include "convolution_param.h"
 #include "cortex_a/conv_dw_kernel_arm.h"
 
+static int prerun(struct node_ops* node_ops, struct exec_node* exec_node, struct exec_graph* exec_graph)
+{
+    struct ir_node* ir_node = exec_node->ir_node;
+    struct ir_graph* ir_graph = ir_node->graph;
+    struct ir_tensor* input_tensor;
+    struct ir_tensor* filter_tensor;
+    struct ir_tensor* output_tensor;
+
+    struct conv_priv_info* conv_priv_info = ( struct conv_priv_info* )exec_node->ops_priv;
+
+    input_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[0]);
+    filter_tensor = get_ir_graph_tensor(ir_graph, ir_node->input_tensors[1]);
+    output_tensor = get_ir_graph_tensor(ir_graph, ir_node->output_tensors[0]);
+
+    struct conv_param* conv_param = ( struct conv_param* )ir_node->op.param_mem;
+
+    // get cpu affinity
+    conv_priv_info->cpu_type = exec_graph->cpu_affinity;
+
+    /* prerun now */
+    if (conv_dw_prerun(input_tensor, filter_tensor, output_tensor, conv_priv_info, conv_param) < 0)
+    {
+        TLOG_ERR("hcl conv prerun failed\n");
+        set_tengine_errno(EFAULT);
+        return -1;
+    }
+
+    return 0;
+}
+
 static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct exec_graph* exec_graph)
 {
     struct ir_node* ir_node = exec_node->ir_node;
@@ -50,7 +80,9 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
     output_tensor = get_ir_graph_tensor(ir_graph, ir_node->output_tensors[0]);
 
     struct conv_param* conv_param = ( struct conv_param* )ir_node->op.param_mem;
-    if (conv_dw_run(input_tensor, weight_tensor, bias_tensor, output_tensor, conv_param, num_thread, cpu_affinity) < 0)
+    struct conv_priv_info* conv_priv_info = ( struct conv_priv_info* )exec_node->ops_priv;
+
+    if (conv_dw_run(input_tensor, weight_tensor, bias_tensor, output_tensor, conv_priv_info, conv_param, num_thread, cpu_affinity) < 0)
     {
         TLOG_ERR("hcl conv run failed\n");
         set_tengine_errno(EFAULT);
@@ -62,6 +94,17 @@ static int run(struct node_ops* node_ops, struct exec_node* exec_node, struct ex
 
 static int init_node(struct node_ops* node_ops, struct exec_node* exec_node, struct exec_graph* exec_graph)
 {
+    struct conv_priv_info* conv_priv_info = ( struct conv_priv_info* )sys_malloc(sizeof(struct conv_priv_info));
+    if (conv_priv_info == NULL)
+    {
+        set_tengine_errno(ENOMEM);
+        return -1;
+    }
+    memset(conv_priv_info, 0, sizeof(struct conv_priv_info));
+
+    /* get shared memory size */
+    exec_node->ops_priv = conv_priv_info;
+
     return 0;
 }
 
@@ -100,18 +143,22 @@ static int score(struct node_ops* node_ops, struct exec_graph* exec_graph, struc
     /* todo support uint8 */
     if (input_tensor->data_type != TENGINE_DT_FP32)
         return 0;
-		
-	if(kernel_h == 7 && kernel_w == 7 && stride_h == 1 && stride_h == 1)
+
+    if (kernel_h == 7 && kernel_w == 7 && stride_h == 1 && stride_w == 1)
         return 0;
-	int input_h = input_tensor->dims[2]; 
-	int input_w = input_tensor->dims[3]; 
+		
+	if (kernel_h == 3 && kernel_w == 3 && stride_h == 1 && stride_w == 1 && pad_h0 == 0 && pad_w0 == 0)
+        return 0;
+
+	int input_h = input_tensor->dims[2];
+	int input_w = input_tensor->dims[3];
 	if (param->group > 1 && in_c == 1 && out_c == 1 && pad_h0 == pad_h1 && pad_w0 == pad_w1 && input_h >= 4 && input_w >= 4)
         return OPS_SCORE_BEST * 2;
     else
         return 0;
 }
 
-static struct node_ops hcl_node_ops = {.prerun = NULL,
+static struct node_ops hcl_node_ops = {.prerun = prerun,
                                        .run = run,
                                        .reshape = NULL,
                                        .postrun = NULL,
