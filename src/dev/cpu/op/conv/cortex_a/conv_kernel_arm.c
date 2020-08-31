@@ -456,6 +456,7 @@ static int winograd_support(struct conv_param* param, int in_h, int in_w)
     int dilation_h = param->dilation_h;
     int dilation_w = param->dilation_w;
     int output_chan = param->output_channel;
+    int input_channel = param->input_channel;
     int group = param->group;
 
     if (in_h < 7 && in_w < 7)
@@ -466,8 +467,10 @@ static int winograd_support(struct conv_param* param, int in_h, int in_w)
         return 0;
     if (dilation_h != 1 || dilation_w != 1 || stride_h != 1 || stride_w != 1)
         return 0;
+	if(input_channel == 16 && in_h == 128 )
+        return 0;
 
-    return 0;
+    return 1;
 }
 
 int conv_hcl_get_shared_mem_size(struct ir_tensor* input, struct ir_tensor* output, struct conv_param* param)
