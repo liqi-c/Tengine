@@ -227,14 +227,14 @@ error:
 
     return NULL;
 }
-
+#if 0
 int DLLEXPORT save_graph(graph_t graph, const char* model_format, const char* fname, ...)
 {
     // TODO: save graph as tengine model
     set_tengine_errno(ENOTSUP);
     return -1;
 }
-
+#endif
 int DLLEXPORT set_graph_layout(graph_t graph, int layout_type)
 {
     struct ir_graph* ir_graph = ( struct ir_graph* )graph;
