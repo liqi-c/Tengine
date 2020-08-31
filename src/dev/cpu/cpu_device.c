@@ -1206,7 +1206,7 @@ static int run(struct nn_device* dev, struct subgraph* subgraph)
             TLOG_ERR("%s: failed to run node %d, %s\n", dev->name, node->ir_node->idx, node->ir_node->name);
             return -1;
         }
-        char* name = node->ir_node->name;
+     //   char* name = node->ir_node->name;
 #ifdef DEBUG_TIME
         double end = get_cur_time();
         fprintf(stderr, "%-20s  %8.2f ms  %s\n", get_op_name(node->ir_node->op.op_type), end - start, name);

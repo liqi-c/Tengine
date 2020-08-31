@@ -101,6 +101,15 @@ if (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
     endif()
 endif()
 
+add_definitions(-Wno-missing-prototypes)
+add_definitions(-Wno-strict-prototypes)
+add_definitions(-Wno-unused-parameter)
+add_definitions(-Wno-pointer-arith)
+add_definitions(-Wno-missing-declarations)
+add_definitions(-Wno-undef)
+add_definitions(-Wno-sign-compare)
+add_definitions(-Wno-shadow)
+
 enable_language(ASM)
 
 # local include files

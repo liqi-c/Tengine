@@ -5,13 +5,13 @@
 
 #include <sys/time.h>
 
-static double get_current_time()
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
+// static double get_current_time()
+// {
+//     struct timeval tv;
+//     gettimeofday(&tv, NULL);
 
-    return tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0;
-}
+//     return tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0;
+// }
 
 static int get_private_mem_size(struct ir_tensor* filter)
 {
@@ -236,9 +236,9 @@ static void sgemm_uint8(struct ir_tensor* input_tensor, struct ir_tensor* filter
     float input_scale = input_tensor->scale;
     float weight_scale = filter_tensor->scale;
     float output_scale = output_tensor->scale;
-    float bias_scale = 0.f;
-    if (bias_tensor)
-        bias_scale = bias_tensor->scale;
+    // float bias_scale = 0.f;
+    // if (bias_tensor)
+    //     bias_scale = bias_tensor->scale;
 
     unsigned char input_zero = input_tensor->zero_point;
     unsigned char weight_zero = filter_tensor->zero_point;
