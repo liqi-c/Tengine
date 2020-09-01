@@ -34,7 +34,7 @@ file(GLOB_RECURSE TENGINE_BACKEND_HCL_OPS   "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu
                                             "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/op/*arm.c")
 
 # add hcl asm operator files
-if (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
+if ("${TENGINE_TARGET_PROCESSOR}" MATCHES "ARM")
     if (TENGINE_TARGET_PROCESSOR_32Bit)
         file(GLOB_RECURSE TENGINE_BACKEND_HCL_ASM_OPS "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu/op/aarch32/*.S")
     else()
@@ -47,7 +47,7 @@ file(GLOB_RECURSE TENGINE_BACKEND_CMSIS_OPS "${CMAKE_CURRENT_SOURCE_DIR}/dev/cpu
 
 
 # add advanced hcl source files
-if (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
+if ("${TENGINE_TARGET_PROCESSOR}" MATCHES "ARM")
     add_library(${PROJECT_NAME} STATIC
         ${TENGINE_LIB_SRCS} ${TENGINE_FRONT_END_SRCS}
         ${TENGINE_SERIALIZER_SRCS}

@@ -88,7 +88,7 @@ endif()
 add_definitions(-fPIC)
 add_definitions(-O2)
 
-if (${TENGINE_TARGET_PROCESSOR} MATCHES "ARM")
+if ("${TENGINE_TARGET_PROCESSOR}" MATCHES "ARM")
     if (TENGINE_TARGET_PROCESSOR_32Bit AND NOT ANDROID)
         add_definitions(-march=armv7-a)
         add_definitions(-mfpu=neon)
