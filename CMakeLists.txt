@@ -115,6 +115,7 @@ if (ANDROID)
     add_definitions(-Wno-unused-function)
 else()
     add_definitions(-Wno-misleading-indentation)
+    add_definitions(-Wno-unused-but-set-variable)
 endif()
 
 enable_language(ASM)

@@ -118,6 +118,7 @@ typedef void* context_t;
 typedef void* graph_t;
 typedef void* tensor_t;
 typedef void* node_t;
+typedef graph_t teng_graph_t;
 
 typedef int (*event_handler_t)(graph_t, int, void* arg);
 
@@ -125,166 +126,166 @@ typedef void (*log_print_t)(const char*);
 
 /* performance profiling records */
 
-struct perf_info
-{
-    const char* name; /* node name */
-    const char* dev_name; /* device name */
-    uint32_t count;
-    uint32_t min;
-    uint32_t max;
-    uint64_t total_time; /* us or cycle, depends on devices */
-    uint32_t base; /* 1ms second time number */
-};
+//struct perf_info
+//{
+//    const char* name; /* node name */
+//    const char* dev_name; /* device name */
+//    uint32_t count;
+//    uint32_t min;
+//    uint32_t max;
+//    uint64_t total_time; /* us or cycle, depends on devices */
+//    uint32_t base; /* 1ms second time number */
+//};
 
-struct custom_kernel_tensor
-{
-    int dim[MAX_SHAPE_DIM_NUM]; /* the shape dim array */
-    int dim_num; /* valid entry number */
-    int element_num;
-    int element_size; /* determined  by data_type */
-    int data_type;
-    int dev_type; /* indicate the tensor belongs to CPU/GPU ... */
-    int layout_type; /*  NCHW type or NHWC type*/
-
-    /* quant info */
-    int quant_type; /* int8, int16 or int32 */
-    float* scale;
-    int* zero_point;
-    int* quant_number;
-
-    void* data; /* pointer to host memory (virtual address) */
-    void* dev_mem; /* refers to device memory block */
-    void* mapped_mem; /* the mapped address for device memory block */
-};
+//struct custom_kernel_tensor
+//{
+//    int dim[MAX_SHAPE_DIM_NUM]; /* the shape dim array */
+//    int dim_num; /* valid entry number */
+//    int element_num;
+//    int element_size; /* determined  by data_type */
+//    int data_type;
+//    int dev_type; /* indicate the tensor belongs to CPU/GPU ... */
+//    int layout_type; /*  NCHW type or NHWC type*/
+//
+//    /* quant info */
+//    int quant_type; /* int8, int16 or int32 */
+//    float* scale;
+//    int* zero_point;
+//    int* quant_number;
+//
+//    void* data; /* pointer to host memory (virtual address) */
+//    void* dev_mem; /* refers to device memory block */
+//    void* mapped_mem; /* the mapped address for device memory block */
+//};
 
 /* For user to add user defined kernel*/
-struct custom_kernel_ops
-{
-    const char* kernel_name; /* name of the kernel */
-    const char* op; /* name of the op to be implemented */
-    int force; /* if not set, when bind() failed,
-      try to use other kernel implementations*/
-    void* kernel_param; /* used for kernel impl functions */
-    int kernel_param_size;
-
-    /*!
-     * @brief generate output shape according to input shapes
-     *        if not implemented, set it to NULL.
-     *
-     * @param [in]  ops: The point of custom defined kernel.
-     * @param [in]  inputs[]:  pointer array to the shape of input tensors.
-     *                         the shape has MAX_SHAPE_DIM_NUM elements,
-     *                         and element with value 0  means the end of the shape.
-     * @param [in]  input_num: The number of input tensors.
-     * @param [out] outputs[]: pointer array to the shape of output tensors.
-     *                         the memory has been allocated already
-     * @param [in]  output_num: The number of output tensors
-     * @param [in]  layout: the graph layout is NHWC or NCHW
-     *
-     * @return 0: success, -1: fail.
-     */
-    int (*infer_shape)(struct custom_kernel_ops* ops, const int* inputs[], int input_num, int* outputs[],
-                       int output_num, int layout);
-
-    /*!
-     * @brief Get the inplace input tensor index for an output tensor.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     * @param [in] output_idx: The index of custom defined kernel output.
-     *
-     * @return the inplace input tensor index for an output tensor.
-     *         if the output tensor is not an inplace one, return -1.
-     */
-    int (*inplace_info)(struct custom_kernel_ops* ops, int output_idx);    // optional
-
-    /*!
-     * @brief Check if the kernel can work on the input and output shapes.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     * @param [in] inputs[]: The custom kernel tensors for input.
-     * @param [in] input_num: The number of the input tensors.
-     * @param [in] outputs[]: The custom kernel output tensor for output
-     * @param [in] output_num: The number of the output tensors.
-     *
-     * @return 0 if the input and output are supported
-     *         otherwise, return -1.
-     *
-     * notes: If not implemented, set it NULL, which means always return 0.
-     */
-    int (*bind)(struct custom_kernel_ops* ops, const struct custom_kernel_tensor* inputs[], int input_num,
-                const struct custom_kernel_tensor* outputs[], int output_num);
-
-    /*!
-     * @brief Prepare for run graph.
-     *        dynamic_shape means it is not an abnormal case when input_num is zero.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     * @param [in] inputs[]: The custom defined kernel input tensor.
-     * @param [in] input_num: The number of the custom defined kernel input tensor.
-     * @param [in] outputs[]: The custom defined kernel output tensor.
-     * @param [in] output_num: The number of the custom defined kernel output tensor.
-     * @param [in] dynamic_shape: It is not an abnormal case when input_num is zero.
-
-     * @return 0: success, -1: fail.
-     */
-    int (*prerun)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
-                  struct custom_kernel_tensor* outputs[], int output_num, int dynamic_shape);
-
-    /*!
-     * @brief Reshape the graph.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     * @param [in] inputs[]: The custom defined kernel input tensor.
-     * @param [in] input_num: The number of the custom defined kernel input tensor.
-     * @param [in] outputs[]: The custom defined kernel output tensor.
-     * @param [in] output_num: The number of the custom defined kernel output tensor.
-
-     * @return 0: success, -1: fail.
-     *
-     * notes: It will be called, when input shape changed.
-     *        After prerun() has been called, need to reclaim and re-allocate run-time
-     *        resource depends on input shape.
-     */
-    int (*reshape)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
-                   struct custom_kernel_tensor* outputs[], int output_num);
-
-    /*!
-     * @brief Run the graph.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     * @param [in] inputs[]: The custom defined kernel input tensor.
-     * @param [in] input_num: The number of the custom defined kernel input tensor.
-     * @param [in] outputs[]: The custom defined kernel output tensor.
-     * @param [in] output_num: The number of the custom defined kernel output tensor.
-
-     * @return 0: success, -1: fail.
-     */
-    int (*run)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
-               struct custom_kernel_tensor* outputs[], int output_num);
-
-    /*!
-     * @brief Pause the graph and release the resources used when the graph is running.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     * @param [in] inputs[]: The custom defined kernel input tensor.
-     * @param [in] input_num: The number of the custom defined kernel input tensor.
-     * @param [in] outputs[]: The custom defined kernel output tensor.
-     * @param [in] output_num: The number of the custom defined kernel output tensor.
-
-     * @return 0: success, -1: fail.
-     */
-    int (*postrun)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
-                   struct custom_kernel_tensor* outputs[], int output_num);
-
-    /*!
-     * @brief Free the resource allocated this ops implementation.
-     *
-     * @param [in] ops: The point of custom defined kernel.
-     *
-     * @return None.
-     */
-    void (*release)(struct custom_kernel_ops* ops);
-};
+//struct custom_kernel_ops
+//{
+//    const char* kernel_name; /* name of the kernel */
+//    const char* op; /* name of the op to be implemented */
+//    int force; /* if not set, when bind() failed,
+//      try to use other kernel implementations*/
+//    void* kernel_param; /* used for kernel impl functions */
+//    int kernel_param_size;
+//
+//    /*!
+//     * @brief generate output shape according to input shapes
+//     *        if not implemented, set it to NULL.
+//     *
+//     * @param [in]  ops: The point of custom defined kernel.
+//     * @param [in]  inputs[]:  pointer array to the shape of input tensors.
+//     *                         the shape has MAX_SHAPE_DIM_NUM elements,
+//     *                         and element with value 0  means the end of the shape.
+//     * @param [in]  input_num: The number of input tensors.
+//     * @param [out] outputs[]: pointer array to the shape of output tensors.
+//     *                         the memory has been allocated already
+//     * @param [in]  output_num: The number of output tensors
+//     * @param [in]  layout: the graph layout is NHWC or NCHW
+//     *
+//     * @return 0: success, -1: fail.
+//     */
+//    int (*infer_shape)(struct custom_kernel_ops* ops, const int* inputs[], int input_num, int* outputs[],
+//                       int output_num, int layout);
+//
+//    /*!
+//     * @brief Get the inplace input tensor index for an output tensor.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     * @param [in] output_idx: The index of custom defined kernel output.
+//     *
+//     * @return the inplace input tensor index for an output tensor.
+//     *         if the output tensor is not an inplace one, return -1.
+//     */
+//    int (*inplace_info)(struct custom_kernel_ops* ops, int output_idx);    // optional
+//
+//    /*!
+//     * @brief Check if the kernel can work on the input and output shapes.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     * @param [in] inputs[]: The custom kernel tensors for input.
+//     * @param [in] input_num: The number of the input tensors.
+//     * @param [in] outputs[]: The custom kernel output tensor for output
+//     * @param [in] output_num: The number of the output tensors.
+//     *
+//     * @return 0 if the input and output are supported
+//     *         otherwise, return -1.
+//     *
+//     * notes: If not implemented, set it NULL, which means always return 0.
+//     */
+//    int (*bind)(struct custom_kernel_ops* ops, const struct custom_kernel_tensor* inputs[], int input_num,
+//                const struct custom_kernel_tensor* outputs[], int output_num);
+//
+//    /*!
+//     * @brief Prepare for run graph.
+//     *        dynamic_shape means it is not an abnormal case when input_num is zero.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     * @param [in] inputs[]: The custom defined kernel input tensor.
+//     * @param [in] input_num: The number of the custom defined kernel input tensor.
+//     * @param [in] outputs[]: The custom defined kernel output tensor.
+//     * @param [in] output_num: The number of the custom defined kernel output tensor.
+//     * @param [in] dynamic_shape: It is not an abnormal case when input_num is zero.
+//
+//     * @return 0: success, -1: fail.
+//     */
+//    int (*prerun)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
+//                  struct custom_kernel_tensor* outputs[], int output_num, int dynamic_shape);
+//
+//    /*!
+//     * @brief Reshape the graph.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     * @param [in] inputs[]: The custom defined kernel input tensor.
+//     * @param [in] input_num: The number of the custom defined kernel input tensor.
+//     * @param [in] outputs[]: The custom defined kernel output tensor.
+//     * @param [in] output_num: The number of the custom defined kernel output tensor.
+//
+//     * @return 0: success, -1: fail.
+//     *
+//     * notes: It will be called, when input shape changed.
+//     *        After prerun() has been called, need to reclaim and re-allocate run-time
+//     *        resource depends on input shape.
+//     */
+//    int (*reshape)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
+//                   struct custom_kernel_tensor* outputs[], int output_num);
+//
+//    /*!
+//     * @brief Run the graph.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     * @param [in] inputs[]: The custom defined kernel input tensor.
+//     * @param [in] input_num: The number of the custom defined kernel input tensor.
+//     * @param [in] outputs[]: The custom defined kernel output tensor.
+//     * @param [in] output_num: The number of the custom defined kernel output tensor.
+//
+//     * @return 0: success, -1: fail.
+//     */
+//    int (*run)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
+//               struct custom_kernel_tensor* outputs[], int output_num);
+//
+//    /*!
+//     * @brief Pause the graph and release the resources used when the graph is running.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     * @param [in] inputs[]: The custom defined kernel input tensor.
+//     * @param [in] input_num: The number of the custom defined kernel input tensor.
+//     * @param [in] outputs[]: The custom defined kernel output tensor.
+//     * @param [in] output_num: The number of the custom defined kernel output tensor.
+//
+//     * @return 0: success, -1: fail.
+//     */
+//    int (*postrun)(struct custom_kernel_ops* ops, struct custom_kernel_tensor* inputs[], int input_num,
+//                   struct custom_kernel_tensor* outputs[], int output_num);
+//
+//    /*!
+//     * @brief Free the resource allocated this ops implementation.
+//     *
+//     * @param [in] ops: The point of custom defined kernel.
+//     *
+//     * @return None.
+//     */
+//    void (*release)(struct custom_kernel_ops* ops);
+//};
 
 /************** Library intialization and version checking *******************/
 
@@ -307,7 +308,7 @@ void release_tengine(void);
  *
  * @return const char * of version string.
  */
-const char* get_tengine_version(void);
+//const char* get_tengine_version(void);
 
 /*!
  * @brief Check the run-time library supports the verson.
@@ -321,7 +322,7 @@ const char* get_tengine_version(void);
  * @param [in] version: A c string returned by get_tengine_version()
  * @return 1: support, 0: not support.
  */
-int request_tengine_version(const char* version);
+//int request_tengine_version(const char* version);
 
 /*************************** graph operate set ********************************/
 
@@ -338,7 +339,7 @@ int request_tengine_version(const char* version);
  * @return  The graph handler or NULL if failed.
  */
 
-graph_t create_graph(context_t context, const char* model_format, const char* file_name, ...);
+graph_t teng_create_graph(context_t context, const char* model_format, const char* file_name, ...);
 
 /*!
  * @brief save the graph into file using the model format
@@ -350,7 +351,7 @@ graph_t create_graph(context_t context, const char* model_format, const char* fi
  * @return  0 success or -1 fail
  */
 
-int save_graph(graph_t graph, const char* model_format, const char* file_name, ...);
+int teng_save_graph(graph_t graph, const char* model_format, const char* file_name, ...);
 
 /*!
  * @brief Set the layout type of the graph
@@ -361,7 +362,7 @@ int save_graph(graph_t graph, const char* model_format, const char* file_name, .
  * @return 0 success, or -1 fail
  */
 
-int set_graph_layout(graph_t graph, int layout_type);
+//int set_graph_layout(graph_t graph, int layout_type);
 
 /*!
  * @brief designate the input nodes of the graph
@@ -372,7 +373,7 @@ int set_graph_layout(graph_t graph, int layout_type);
  *
  * @note  if using the default input nodes of a graph, this call can be skipped
  */
-int set_graph_input_node(graph_t graph, const char* input_nodes[], int input_number);
+int teng_set_graph_input_node(graph_t graph, const char* input_nodes[], int input_number);
 
 /*!
  * @brief designate the output nodes of the graph
@@ -384,7 +385,7 @@ int set_graph_input_node(graph_t graph, const char* input_nodes[], int input_num
  * @note  if using the default output nodes of a graph, this call can be skipped
  */
 
-int set_graph_output_node(graph_t graph, const char* output_nodes[], int output_number);
+int teng_set_graph_output_node(graph_t graph, const char* output_nodes[], int output_number);
 
 /*!
  * @brief Merge several graph into one single graph
@@ -398,7 +399,7 @@ int set_graph_output_node(graph_t graph, const char* output_nodes[], int output_
  * @return New graph or NULL in case of failure
  */
 
-graph_t merge_graph(int graph_num, graph_t graph0, graph_t graph1, ...);
+//graph_t merge_graph(int graph_num, graph_t graph0, graph_t graph1, ...);
 
 /*!
  * @brief Destory the runtime graph and release allocated resource.
@@ -406,7 +407,7 @@ graph_t merge_graph(int graph_num, graph_t graph0, graph_t graph1, ...);
  * @param [in] graph: The graph handle.
  * @return 0: Success, -1: Fail.
  */
-int destroy_graph(graph_t graph);
+int teng_destroy_graph(graph_t graph);
 
 /*!
  * @brief Get the number of input node of the graph.
@@ -414,7 +415,7 @@ int destroy_graph(graph_t graph);
  *  @param [in] graph The graph handle.
  *  @return <0 Fail, >0 the input node number.
  */
-int get_graph_input_node_number(graph_t graph);
+//int get_graph_input_node_number(graph_t graph);
 
 /*!
  * @brief Get the node handle of #idx of input node of the graph.
@@ -424,7 +425,7 @@ int get_graph_input_node_number(graph_t graph);
  *
  * @return The node name or NULL on error.
  */
-node_t get_graph_input_node(graph_t graph, int idx);
+//node_t get_graph_input_node(graph_t graph, int idx);
 
 /*!
  * @brief Get the number of output node of the graph.
@@ -433,7 +434,7 @@ node_t get_graph_input_node(graph_t graph, int idx);
  *
  *  @return <0 error, >0 the input node number.
  */
-int get_graph_output_node_number(graph_t graph);
+//int get_graph_output_node_number(graph_t graph);
 
 /*!
  * @brief Get the node handle #idx of a graph output node.
@@ -443,7 +444,7 @@ int get_graph_output_node_number(graph_t graph);
  *
  * @return The node name or NULL on error.
  */
-node_t get_graph_output_node(graph_t graph, int idx);
+node_t teng_get_graph_output_node(graph_t graph, int idx);
 
 /*!
  * @brief Get a tensor handle of a graph output node.
@@ -455,7 +456,7 @@ node_t get_graph_output_node(graph_t graph, int idx);
  * @return The tensor handle or NULL on error.
  *
  */
-tensor_t get_graph_output_tensor(graph_t graph, int output_node_idx, int tensor_idx);
+tensor_t teng_get_graph_output_tensor(graph_t graph, int output_node_idx, int tensor_idx);
 
 /*!
  * @brief Get tensor handle of one graph input tensor.
@@ -466,7 +467,7 @@ tensor_t get_graph_output_tensor(graph_t graph, int output_node_idx, int tensor_
  *
  * @return The tensor handle or NULL on error.
  */
-tensor_t get_graph_input_tensor(graph_t graph, int input_node_idx, int tensor_idx);
+tensor_t teng_get_graph_input_tensor(graph_t graph, int input_node_idx, int tensor_idx);
 
 /******************* node operate set ****************************/
 /*!
@@ -478,7 +479,7 @@ tensor_t get_graph_input_tensor(graph_t graph, int input_node_idx, int tensor_id
  *
  * @return The node handle or NULL on error.
  */
-node_t create_graph_node(graph_t graph, const char* node_name, const char* op_name);
+node_t teng_create_graph_node(graph_t graph, const char* node_name, const char* op_name);
 
 /*!
  * @brief  Get the node handle of the graph.
@@ -488,7 +489,7 @@ node_t create_graph_node(graph_t graph, const char* node_name, const char* op_na
  *
  * @return The node handle or NULL on error.
  */
-node_t get_graph_node(graph_t graph, const char* node_name);
+node_t teng_get_graph_node(graph_t graph, const char* node_name);
 
 /*!
  * @brief Get the node name.
@@ -497,7 +498,7 @@ node_t get_graph_node(graph_t graph, const char* node_name);
  *
  * @return The node name, NULL on error.
  */
-const char* get_node_name(node_t node);
+const char* teng_get_node_name(node_t node);
 
 /*!
  * @brief Get the node op.
@@ -506,7 +507,7 @@ const char* get_node_name(node_t node);
  *
  * @return The op name, NULL on error.
  */
-const char* get_node_op(node_t node);
+const char* teng_get_node_op(node_t node);
 
 /*!
  * @brief  Release the node handle.
@@ -515,7 +516,7 @@ const char* get_node_op(node_t node);
  *
  * @return None.
  */
-void release_graph_node(node_t node);
+void teng_release_graph_node(node_t node);
 
 /*!
  * @brief Get the input tensor handle of a node.
@@ -526,7 +527,7 @@ void release_graph_node(node_t node);
  * @return The tensor name or NULL on error.
  *
  */
-tensor_t get_node_input_tensor(node_t node, int input_idx);
+tensor_t teng_get_node_input_tensor(node_t node, int input_idx);
 
 /*!
  * @brief Get the output tensor handle of a node.
@@ -537,7 +538,7 @@ tensor_t get_node_input_tensor(node_t node, int input_idx);
  * @return The tensor handle or NULL on error.
  *
  */
-tensor_t get_node_output_tensor(node_t node, int output_idx);
+tensor_t teng_get_node_output_tensor(node_t node, int output_idx);
 
 /*!
  * @brief Set a node's the #idx input tensor.
@@ -549,7 +550,7 @@ tensor_t get_node_output_tensor(node_t node, int output_idx);
  * @return 0 on success or -1 on error.
  *
  */
-int set_node_input_tensor(node_t node, int input_idx, tensor_t tensor);
+int teng_set_node_input_tensor(node_t node, int input_idx, tensor_t tensor);
 
 /*!
  * @brief Set a node's the #idx output tensor.
@@ -562,7 +563,7 @@ int set_node_input_tensor(node_t node, int input_idx, tensor_t tensor);
  *  @return 0 on success or -1 on error.
  *
  */
-int set_node_output_tensor(node_t node, int output_idx, tensor_t tensor, int tensor_type);
+int teng_set_node_output_tensor(node_t node, int output_idx, tensor_t tensor, int tensor_type);
 
 /*!
  * @brief Get the output tensor number of a node.
@@ -575,7 +576,7 @@ int set_node_output_tensor(node_t node, int output_idx, tensor_t tensor, int ten
  *
  */
 
-int get_node_output_number(node_t node);
+//int get_node_output_number(node_t node);
 
 /*!
  * @brief Get the input tensor number of a node.
@@ -587,7 +588,7 @@ int get_node_output_number(node_t node);
  *         -1 on error.
  *
  */
-int get_node_input_number(node_t node);
+int teng_get_node_input_number(node_t node);
 
 /*!
  * @brief Add an attribute to a node.
@@ -601,7 +602,7 @@ int get_node_input_number(node_t node);
  * @return 0: Successfully,
  *         -1: Failed.
  */
-int add_node_attr(node_t node, const char* attr_name, const char* type_name, int size);
+//int add_node_attr(node_t node, const char* attr_name, const char* type_name, int size);
 
 /*!
  * @brief Get the attribute value (int) of a node
@@ -615,7 +616,7 @@ int add_node_attr(node_t node, const char* attr_name, const char* type_name, int
  *         -1: Failed, the name does not exist or the type mismatch.
  *
  */
-int get_node_attr_int(node_t node, const char* attr_name, int* attr_val);
+//int get_node_attr_int(node_t node, const char* attr_name, int* attr_val);
 
 /*!
  * @brief Get the attribute value (float) of a node
@@ -628,7 +629,7 @@ int get_node_attr_int(node_t node, const char* attr_name, int* attr_val);
  * @return 0: Retrieval value Successfully,
  *         -1: Failed, the name does not exist or the type mismatch.
  */
-int get_node_attr_float(node_t node, const char* attr_name, float* attr_val);
+//int get_node_attr_float(node_t node, const char* attr_name, float* attr_val);
 
 /*!
  * @brief Get the attribute value (pointer) of a node
@@ -641,7 +642,7 @@ int get_node_attr_float(node_t node, const char* attr_name, float* attr_val);
  * @return  0: Retrieval value Successfully,
  *         -1: Failed, the name does not exist or the type mismatch.
  */
-int get_node_attr_pointer(node_t node, const char* attr_name, void* attr_val);
+//int get_node_attr_pointer(node_t node, const char* attr_name, void* attr_val);
 
 /*!
  * @brief Get the attribute value of a node, the data type is indicated by type_info.
@@ -657,7 +658,7 @@ int get_node_attr_pointer(node_t node, const char* attr_name, void* attr_val);
  *         -1: Failed; The name does not exist or the type mismatch.
  *
  */
-int get_node_attr_generic(node_t node, const char* attr_name, const char* type_name, void* buf, int size);
+//int get_node_attr_generic(node_t node, const char* attr_name, const char* type_name, void* buf, int size);
 
 /*!
  * @brief Set the attribute value (int) of a node
@@ -671,7 +672,7 @@ int get_node_attr_generic(node_t node, const char* attr_name, const char* type_n
  *         -1: Failed, The name does not exist or the type mismatch.
  *
  */
-int set_node_attr_int(node_t node, const char* attr_name, const int* attr_val);
+int teng_set_node_attr_int(node_t node, const char* attr_name, const int* attr_val);
 
 /*!
  * @brief Set the attribute value (float) of a node
@@ -685,7 +686,7 @@ int set_node_attr_int(node_t node, const char* attr_name, const int* attr_val);
  *         -1: Failed, The name does not exist or the type mismatch.
  *
  */
-int set_node_attr_float(node_t node, const char* attr_name, const float* attr_val);
+//int set_node_attr_float(node_t node, const char* attr_name, const float* attr_val);
 
 /*!
  * @brief Set the attribute value (pointer) of a node
@@ -699,7 +700,7 @@ int set_node_attr_float(node_t node, const char* attr_name, const float* attr_va
  *         -1: Failed, The name does not exist or the type mismatch.
  *
  */
-int set_node_attr_pointer(node_t node, const char* attr_name, const void* attr_val);
+//int set_node_attr_pointer(node_t node, const char* attr_name, const void* attr_val);
 
 /*!
  * @brief Set the attribute value of a node, the data type is indicated by type_info.
@@ -715,7 +716,7 @@ int set_node_attr_pointer(node_t node, const char* attr_name, const void* attr_v
  *         -1: Failed, The name does not exist or the type mismatch.
  *
  */
-int set_node_attr_generic(node_t node, const char* attr_name, const char* type_name, const void* buf, int size);
+int teng_set_node_attr_generic(node_t node, const char* attr_name, const char* type_name, const void* buf, int size);
 
 /*!
  * @brief Set customer kernel of a node, on a specific device,
@@ -727,7 +728,7 @@ int set_node_attr_generic(node_t node, const char* attr_name, const char* type_n
  *
  * @return 0: Success, -1: Fail.
  */
-int set_custom_kernel(node_t node, const char* dev_name, struct custom_kernel_ops* kernel_ops);
+//int set_custom_kernel(node_t node, const char* dev_name, struct custom_kernel_ops* kernel_ops);
 
 /*!
  * @brief Remove customer kernel of a node, on a specific device.
@@ -737,7 +738,7 @@ int set_custom_kernel(node_t node, const char* dev_name, struct custom_kernel_op
  *
  * @return 0: Success, -1: Fail.
  */
-int remove_custom_kernel(node_t node, const char* dev_name);
+//int remove_custom_kernel(node_t node, const char* dev_name);
 
 /********************* Tensor operate set ***********************************/
 
@@ -751,7 +752,7 @@ int remove_custom_kernel(node_t node, const char* dev_name);
  * @return The tensor handle or NULL on error.
  *
  */
-tensor_t create_graph_tensor(graph_t graph, const char* tensor_name, int data_type);
+tensor_t teng_create_graph_tensor(graph_t graph, const char* tensor_name, int data_type);
 
 /*!
  * @brief Get a tensor handle by tensor name.
@@ -762,7 +763,7 @@ tensor_t create_graph_tensor(graph_t graph, const char* tensor_name, int data_ty
  * @return The tensor handle or NULL on error.
  *
  */
-tensor_t get_graph_tensor(graph_t graph, const char* tensor_name);
+tensor_t teng_get_graph_tensor(graph_t graph, const char* tensor_name);
 
 /*!
  * @brief  Get the name of the tensor handle.
@@ -772,7 +773,7 @@ tensor_t get_graph_tensor(graph_t graph, const char* tensor_name);
  * @return A c string.
 
  */
-const char* get_tensor_name(tensor_t tensor);
+//const char* get_tensor_name(tensor_t tensor);
 
 /*!
  * @brief Release the tensor handle.
@@ -781,7 +782,7 @@ const char* get_tensor_name(tensor_t tensor);
  *
  * @return None.
  */
-void release_graph_tensor(tensor_t tensor);
+void teng_release_graph_tensor(tensor_t tensor);
 
 /*!
  * @brief Get the shape of tensor.
@@ -792,7 +793,7 @@ void release_graph_tensor(tensor_t tensor);
  * @return >=1 the valid dim number, or -1 Fail.
  *
  */
-int get_tensor_shape(tensor_t tensor, int dims[], int dim_number);
+int teng_get_tensor_shape(tensor_t tensor, int dims[], int dim_number);
 
 /*!
  * @brief Set the shape of tensor.
@@ -803,7 +804,7 @@ int get_tensor_shape(tensor_t tensor, int dims[], int dim_number);
  * @return 0: Success; -1: Fail.
  *
  */
-int set_tensor_shape(tensor_t tensor, const int dims[], int dim_number);
+int teng_set_tensor_shape(tensor_t tensor, const int dims[], int dim_number);
 
 /*!
  * @brief Get the byte size of a tensor should occupy.
@@ -813,7 +814,7 @@ int set_tensor_shape(tensor_t tensor, const int dims[], int dim_number);
  * @return <0: Error; >=0: Tensor size.
  * @note   If return 0, it means the shape of the tensor is not set yet.
  */
-int get_tensor_buffer_size(tensor_t tensor);
+int teng_get_tensor_buffer_size(tensor_t tensor);
 
 /*!
  * @brief Get the buffer of the tensor.
@@ -823,7 +824,7 @@ int get_tensor_buffer_size(tensor_t tensor);
  * @param [in] tensor: The tensor handle.
  * @return The buffer address. if no buffer allocated return NULL.
  */
-void* get_tensor_buffer(tensor_t tensor);
+void* teng_get_tensor_buffer(tensor_t tensor);
 
 /*!
  * @brief Set the buffer of the tensor.
@@ -836,7 +837,7 @@ void* get_tensor_buffer(tensor_t tensor);
  * @return 0: Success; -1: Fail.
  * @note  The buffer is still managed by caller.
  */
-int set_tensor_buffer(tensor_t tensor, void* buffer, int buffer_size);
+int teng_set_tensor_buffer(tensor_t tensor, void* buffer, int buffer_size);
 
 /*!
  * @brief Copy tensor data to the output data buffer.
@@ -847,7 +848,7 @@ int set_tensor_buffer(tensor_t tensor, void* buffer, int buffer_size);
  * @return 0: Success; or -1: Fail.
  *
  */
-int get_tensor_data(tensor_t tensor, void* output_data, int data_size);
+//int get_tensor_data(tensor_t tensor, void* output_data, int data_size);
 
 /*!
  * @brief Copy the data to tensor buffer.
@@ -859,7 +860,7 @@ int get_tensor_data(tensor_t tensor, void* output_data, int data_size);
  * @return 0: Success; -1: Fail.
  *
  */
-int set_tensor_data(tensor_t tensor, const void* input_data, int data_size);
+//int set_tensor_data(tensor_t tensor, const void* input_data, int data_size);
 
 /*!
  * @brief Get the data type of the tensor.
@@ -868,7 +869,7 @@ int set_tensor_data(tensor_t tensor, const void* input_data, int data_size);
  *
  * @return The tensor type, see TENGINE_DT_FP32 etc, -1 on error.
  */
-int get_tensor_data_type(tensor_t tensor);
+//int get_tensor_data_type(tensor_t tensor);
 
 /*!
  * @brief Set the data type of the tensor.
@@ -878,7 +879,7 @@ int get_tensor_data_type(tensor_t tensor);
  *
  * @return 0 on sucess, -1 on error.
  */
-int set_tensor_data_type(tensor_t tensor, int data_type);
+//int set_tensor_data_type(tensor_t tensor, int data_type);
 
 /*!
  * @brief Set the data layout of the tensor.
@@ -887,7 +888,7 @@ int set_tensor_data_type(tensor_t tensor, int data_type);
  *
  * @return The tensor type, 0 : nchw, 1 : nhwc.
  */
-int get_tensor_layout(tensor_t tensor);
+//int get_tensor_layout(tensor_t tensor);
 
 /*!
  * @brief Set the data layout of the tensor.
@@ -897,7 +898,7 @@ int get_tensor_layout(tensor_t tensor);
  *
  * @return 0 on sucess, -1 on error.
  */
-int set_tensor_layout(tensor_t tensor, int layout);
+//int set_tensor_layout(tensor_t tensor, int layout);
 
 /*!
  * @brief Set tensor quant parameters
@@ -909,7 +910,7 @@ int set_tensor_layout(tensor_t tensor, int layout);
  *
  * @return 0 on sucess, -1 on error.
  */
-int set_tensor_quant_param(tensor_t tensor, const float* scale, const int* zero_point, int number);
+//int set_tensor_quant_param(tensor_t tensor, const float* scale, const int* zero_point, int number);
 
 /*!
  * @brief Get tensor quant parameters.
@@ -922,7 +923,7 @@ int set_tensor_quant_param(tensor_t tensor, const float* scale, const int* zero_
  * @return 0 on sucess, -1 on error.
  */
 
-int get_tensor_quant_param(tensor_t tensor, float* scale, int* zero_point, int number);
+//int get_tensor_quant_param(tensor_t tensor, float* scale, int* zero_point, int number);
 
 /************************** Graph run related interface *********************/
 
@@ -934,7 +935,7 @@ int get_tensor_quant_param(tensor_t tensor, float* scale, int* zero_point, int n
  *
  * @return affinity mask.
  */
-size_t get_cluster_affinity_mask(int cluster);
+//size_t get_cluster_affinity_mask(int cluster);
 
 /*!
  * @brief The interface to set cluster and threads count will used.
@@ -945,7 +946,7 @@ size_t get_cluster_affinity_mask(int cluster);
  *
  * @return 0: Success, -1: Fail.
  */
-int set_graph_thread(graph_t graph, int cluster, int threads);
+//int set_graph_thread(graph_t graph, int cluster, int threads);
 
 /*!
  * @brief The interface to directly set used cpu mask.
@@ -955,7 +956,7 @@ int set_graph_thread(graph_t graph, int cluster, int threads);
  *
  * @return 0: Success, -1: Fail.
  */
-int set_graph_thread_mask(graph_t graph, size_t cpu_mask);
+//int set_graph_thread_mask(graph_t graph, size_t cpu_mask);
 
 /*!
  * @brief The interface to set some proprietary attribute items for graph.
@@ -968,7 +969,7 @@ int set_graph_thread_mask(graph_t graph, size_t cpu_mask);
  *
  * @return 0: Success, -1: Fail.
  */
-int set_graph_attr(graph_t graph, const char* attr_name, const void* buf, int size);
+//int set_graph_attr(graph_t graph, const char* attr_name, const void* buf, int size);
 
 /*!
  * @brief The interface to get some proprietary config items for graph.
@@ -981,7 +982,7 @@ int set_graph_attr(graph_t graph, const char* attr_name, const void* buf, int si
  * @return 0: Success, -1: Fail.
  *
  */
-int get_graph_attr(graph_t graph, const char* attr_name, void* buf, int size);
+//int get_graph_attr(graph_t graph, const char* attr_name, void* buf, int size);
 
 /*!
  * @brief Set the gradient descent method.
@@ -993,7 +994,7 @@ int get_graph_attr(graph_t graph, const char* attr_name, void* buf, int size);
  * @return 0: Success, -1: Fail.
  *
  */
-int set_graph_gd_method(graph_t graph, int gd_method, ...);
+//int set_graph_gd_method(graph_t graph, int gd_method, ...);
 
 /*!
  * @brief Initialize resource for graph execution, and set cluster and threads count will used.
@@ -1005,7 +1006,7 @@ int set_graph_gd_method(graph_t graph, int gd_method, ...);
  * @return 0: Success, -1: Fail.
  *
  */
-int prerun_graph_multithread(graph_t graph, int cluster, int threads);
+int teng_prerun_graph_multithread(graph_t graph, int cluster, int threads);
 
 /*!
  * @brief Initialize resource for graph execution.
@@ -1015,7 +1016,7 @@ int prerun_graph_multithread(graph_t graph, int cluster, int threads);
  * @return 0: Success, -1: Fail.
  *
  */
-int prerun_graph(graph_t graph);
+int teng_prerun_graph(graph_t graph);
 
 /*!
  * @brief Execute graph.
@@ -1026,7 +1027,7 @@ int prerun_graph(graph_t graph);
  * @note  If block is 0, need to call wait_graph to get result or set GRAPH_DONE event hook.
  *
  */
-int run_graph(graph_t graph, int block);
+int teng_run_graph(graph_t graph, int block);
 
 /*!
  * @brief Wait graph execution done.
@@ -1037,7 +1038,7 @@ int run_graph(graph_t graph, int block);
  *          0: Try again.
  *
  */
-int wait_graph(graph_t graph, int try_wait);
+//int wait_graph(graph_t graph, int try_wait);
 
 /*!
  * @brief Release the resource for graph execution.
@@ -1045,7 +1046,7 @@ int wait_graph(graph_t graph, int try_wait);
  *
  * @return 0: Success, -1: Fail.
  */
-int postrun_graph(graph_t graph);
+int teng_postrun_graph(graph_t graph);
 
 /*!
  * @brief Get the status of graph execution.
@@ -1054,7 +1055,7 @@ int postrun_graph(graph_t graph);
  *
  * @return status
  */
-int get_graph_exec_status(graph_t graph);
+//int get_graph_exec_status(graph_t graph);
 
 /*!
  * @brief Set the event hook for graph execution.
@@ -1066,7 +1067,7 @@ int get_graph_exec_status(graph_t graph);
  * @return 0: Success, -1: Fail.
  *
  */
-int set_graph_event_hook(graph_t graph, int event, event_handler_t cb_func, void* cb_arg);
+//int set_graph_event_hook(graph_t graph, int event, event_handler_t cb_func, void* cb_arg);
 
 /***************** Device related *****************************/
 
@@ -1077,7 +1078,7 @@ int set_graph_event_hook(graph_t graph, int event, event_handler_t cb_func, void
  * @return 0: valid, -1: invalid.
  *
  */
-int set_default_device(const char* device);
+//int set_default_device(const char* device);
 
 /*!
  * @brief Set the device to execution a graph.
@@ -1089,7 +1090,7 @@ int set_default_device(const char* device);
  *          <0: error.
  *
  */
-int set_graph_device(graph_t graph, const char* dev_name);
+//int set_graph_device(graph_t graph, const char* dev_name);
 
 /*!
  * @brief Set the device to execution a node.
@@ -1100,7 +1101,7 @@ int set_graph_device(graph_t graph, const char* dev_name);
  * @return =0: Bind ok.
  *         <0: Fail
  */
-int set_node_device(node_t node, const char* dev_name);
+//int set_node_device(node_t node, const char* dev_name);
 
 /*!
  * @brief get the device the node runs on
@@ -1110,7 +1111,7 @@ int set_node_device(node_t node, const char* dev_name);
  * @return the device name or NULL if no device assigned yet
  */
 
-const char* get_node_device(node_t node);
+//const char* get_node_device(node_t node);
 
 /*!
  * @brief Enable dump function pre-defined on device on a node,
@@ -1122,7 +1123,7 @@ const char* get_node_device(node_t node);
  * @return 0 success, or -1 on error.
  */
 
-int do_node_dump(node_t node, int action);
+//int do_node_dump(node_t node, int action);
 
 /*!
  * @brief Get the dump buffer pointer generated by target device
@@ -1138,7 +1139,7 @@ int do_node_dump(node_t node, int action);
  *
  */
 
-int get_node_dump_buffer(node_t node, void** buf, int buf_size);
+//int get_node_dump_buffer(node_t node, void** buf, int buf_size);
 
 /*!
  * @brief Start or stop the perf stats
@@ -1149,7 +1150,7 @@ int get_node_dump_buffer(node_t node, void** buf, int buf_size);
  * @return 0 success, -1 fail
  */
 
-int do_graph_perf_stat(graph_t graph, int action);
+//int do_graph_perf_stat(graph_t graph, int action);
 
 /*!
  * @brief get graph performance stats records
@@ -1163,14 +1164,14 @@ int do_graph_perf_stat(graph_t graph, int action);
  * @return the number of record retrieved or -1 on fail
  */
 
-int get_graph_perf_stat(graph_t graph, struct perf_info** buf, int buf_size);
+//int get_graph_perf_stat(graph_t graph, struct perf_info** buf, int buf_size);
 
 /*!
  * @brief Get the device number in the system.
  *
  * @return The number of device.
  */
-int get_device_number(void);
+//int get_device_number(void);
 
 /*!
  * @brief Get the device name by specific index.
@@ -1179,7 +1180,7 @@ int get_device_number(void);
  *
  * @return the name of the device.
  */
-const char* get_device_name(int idx);
+//const char* get_device_name(int idx);
 
 /*!
  * @brief Get the default name of device.
@@ -1187,7 +1188,7 @@ const char* get_device_name(int idx);
  * @return The name of the default device.
  */
 
-const char* get_default_device(void);
+//const char* get_default_device(void);
 
 /*!
  * @brief Create device, for predefined device but driver does not auto probed device.
@@ -1197,7 +1198,7 @@ const char* get_default_device(void);
  * @return =0: Success.
  *         <0: Fail.
  */
-int create_device(const char* driver_name, const char* dev_name);
+//int create_device(const char* driver_name, const char* dev_name);
 
 /*!
  * @brief Destroy device, for predefined device but driver does not auto probed device.
@@ -1208,7 +1209,7 @@ int create_device(const char* driver_name, const char* dev_name);
  * @return =0: Success.
  *         <0: Fail.
  */
-int destroy_device(const char* driver_name, const char* dev_name);
+//int destroy_device(const char* driver_name, const char* dev_name);
 
 /*!
  * @brief Set the device working policy.
@@ -1218,7 +1219,7 @@ int destroy_device(const char* driver_name, const char* dev_name);
  *
  * @return 0: Success, -1: Fail.
  */
-int set_device_policy(const char* device_name, enum device_policy policy);
+//int set_device_policy(const char* device_name, enum device_policy policy);
 
 /*!
  * @brief Get the device working mode.
@@ -1226,7 +1227,7 @@ int set_device_policy(const char* device_name, enum device_policy policy);
  * @param [in] device_name: The device name.
  * @return >=0: The mode, -1: Fail.
  */
-int get_device_policy(const char* device_name);
+//int get_device_policy(const char* device_name);
 
 /*!
  * @brief Get the config setting by config name. the config request may be passed to driver.
@@ -1237,7 +1238,7 @@ int get_device_policy(const char* device_name);
  * @param [in] size: The buffer size.
  * @return 0: Success, -1: Fail.
  */
-int get_device_attr(const char* device_name, const char* attr_name, void* val, int size);
+//int get_device_attr(const char* device_name, const char* attr_name, void* val, int size);
 
 /*!
  * @brief Set the config item of the device. The config item may be passed to driver.
@@ -1248,7 +1249,7 @@ int get_device_attr(const char* device_name, const char* attr_name, void* val, i
  * @param [in] size: The buffer size.
  * @return 0: Success, -1: Fail.
  */
-int set_device_attr(const char* device_name, const char* attr_name, void* val, int size);
+//int set_device_attr(const char* device_name, const char* attr_name, void* val, int size);
 
 /******************** execution context *****************************/
 
@@ -1262,14 +1263,14 @@ int set_device_attr(const char* device_name, const char* attr_name, void* val, i
  * @return Execution context handle.
  *         If create Failed, return NULL.
  */
-context_t create_context(const char* context_name, int empty_context);
+context_t teng_create_context(const char* context_name, int empty_context);
 
 /*!
  * @brief Destory and reclaim the resource related with the context.
  *
  * @param [in] context: The context handle.
  */
-void destroy_context(context_t context);
+void teng_destroy_context(context_t context);
 
 /*!
  * @brief Get the device number assigned to a context.
@@ -1279,7 +1280,7 @@ void destroy_context(context_t context);
  * @return The number of devices inside the context.
  */
 
-int get_context_device_number(context_t context);
+//int get_context_device_number(context_t context);
 
 /*!
  * @brief Get the name of the idx device in a context.
@@ -1290,7 +1291,7 @@ int get_context_device_number(context_t context);
  * @return  The name of device or NULL.
  */
 
-const char* get_context_device_name(context_t context, int idx);
+//const char* get_context_device_name(context_t context, int idx);
 
 /*!
  *  @brief Add a device into one context.
@@ -1300,7 +1301,7 @@ const char* get_context_device_name(context_t context, int idx);
  *
  *  @return 0: Success, -1: Fail.
  */
-int add_context_device(context_t context, const char* dev_name);
+//int add_context_device(context_t context, const char* dev_name);
 
 /*!
  *  @brief Remove a device from one context.
@@ -1310,7 +1311,7 @@ int add_context_device(context_t context, const char* dev_name);
  *
  *  @return 0: Success, -1: Fail.
  */
-int remove_context_device(context_t context, const char* dev_name);
+//int remove_context_device(context_t context, const char* dev_name);
 
 /*!
  * @brief Set attribute item of a context.
@@ -1321,7 +1322,7 @@ int remove_context_device(context_t context, const char* dev_name);
  * @param [in] size: The buffer size.
  * @return 0: Success, -1: Fail.
  */
-int set_context_attr(context_t context, const char* attr_name, const void* val, int val_size);
+//int set_context_attr(context_t context, const char* attr_name, const void* val, int val_size);
 
 /*!
  * @brief Get the attribute item of a context.
@@ -1332,7 +1333,7 @@ int set_context_attr(context_t context, const char* attr_name, const void* val, 
  * @param [in] size: The buffer size.
  * @return 0: Succuess, -1: Fail.
  */
-int get_context_attr(context_t context, const char* attr_name, void* val, int val_size);
+//int get_context_attr(context_t context, const char* attr_name, void* val, int val_size);
 
 /*
  * Misc API
@@ -1347,7 +1348,7 @@ int get_context_attr(context_t context, const char* attr_name, void* val, int va
  * @note It is MT-safe
  */
 
-int get_tengine_errno(void);
+//int get_tengine_errno(void);
 
 /*!
  * @brief return and clear the error number
@@ -1358,14 +1359,14 @@ int get_tengine_errno(void);
  * @note It is MT-safe
  */
 
-int clr_tengine_errno(void);
+//int clr_tengine_errno(void);
 
 /*!
  * @brief Set the logger level.
  *
  * @param [in] level: The log level.
  */
-void set_log_level(enum log_level level);
+void teng_set_log_level(enum log_level level);
 
 /*!
  * @brief set the print function of log.
@@ -1377,7 +1378,7 @@ void set_log_level(enum log_level level);
  * @note  default log output is stdout
  */
 
-void set_log_output(log_print_t func);
+void teng_set_log_output(log_print_t func);
 
 /*!
  * @brief Dump the run-time graph.
@@ -1385,7 +1386,7 @@ void set_log_output(log_print_t func);
  *
  * @param [in] graph: The graph handle.
  */
-void dump_graph(graph_t graph);
+void teng_dump_graph(graph_t graph);
 
 /**************************** Plug-in operate set *******************/
 /*!
@@ -1398,7 +1399,7 @@ void dump_graph(graph_t graph);
  * @return 0: Plugin loaded and inited Success,
  *      -1: Fail
  */
-int load_tengine_plugin(const char* plugin_name, const char* fname, const char* init_func_name);
+//int load_tengine_plugin(const char* plugin_name, const char* fname, const char* init_func_name);
 
 /*!
  * @brief Unload one plugin and call the release function.
@@ -1409,14 +1410,14 @@ int load_tengine_plugin(const char* plugin_name, const char* fname, const char* 
  * @return  0: Success;
  *      -1: Fail.
  */
-int unload_tengine_plugin(const char* plugin_name, const char* rel_func_name);
+//int unload_tengine_plugin(const char* plugin_name, const char* rel_func_name);
 
 /*!
  * @brief Get the number of loaded plugin.
  *
  * @return The plugin number.
  */
-int get_tengine_plugin_number(void);
+//int get_tengine_plugin_number(void);
 
 /*!
  * @brief Get the name of #idx plugin.
@@ -1425,7 +1426,7 @@ int get_tengine_plugin_number(void);
  *
  * @return The name of plugin.
  */
-const char* get_tengine_plugin_name(int idx);
+//const char* get_tengine_plugin_name(int idx);
 
 #ifdef __cplusplus
 }
