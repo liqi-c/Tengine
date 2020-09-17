@@ -96,8 +96,8 @@ if ("${TENGINE_TARGET_PROCESSOR}" MATCHES "ARM")
         add_definitions(-mfpu=neon-fp16)
     endif()
 
-    if (TENGINE_TOOLCHIN_FLAG)
-        add_definitions ("${TENGINE_TOOLCHIN_FLAG}")
+    if (TENGINE_TOOLCHAIN_FLAG)
+        add_definitions ("${TENGINE_TOOLCHAIN_FLAG}")
     endif()
 endif()
 
